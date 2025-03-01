@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>محادثة ذكية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-color: #4361ee;
@@ -444,7 +443,6 @@
                 <div class="status-dot connected" id="status-dot"></div>
                 <span id="status-text">متصل</span>
                 <span id="model-info">Azure OpenAI</span>
-                <span id="connection-status"></span>
             </div>
             <div class="tools">
                 <button class="tool-button" id="clear-chat" title="مسح المحادثة">
@@ -511,42 +509,40 @@
         </div>
     </div>
     
-    <script type="module">
-        // استيراد الإعدادات من ملف التكوين
-        import { OPENAI_API_KEY, OPENAI_MODEL, OPENAI_BASE_URL } from './config.js';
-        
-        // إعدادات OpenAI
-        const apiKey = OPENAI_API_KEY;
-        const model = OPENAI_MODEL;
-        const baseUrl = OPENAI_BASE_URL;
-        
+    <script>
         // العناصر الرئيسية
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
-        const clearButton = document.getElementById('clear-chat');
-        const saveButton = document.getElementById('save-chat');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const clearChatButton = document.getElementById('clear-chat');
+        const saveChatButton = document.getElementById('save-chat');
         const settingsButton = document.getElementById('settings-button');
         const settingsModal = document.getElementById('settings-modal');
         const closeSettings = document.getElementById('close-settings');
         const darkModeToggle = document.getElementById('dark-mode-toggle');
         const themeOptions = document.querySelectorAll('.theme-option');
-        const connectionStatus = document.getElementById('connection-status');
+        
+        // إعدادات Azure OpenAI
+        const apiKey = "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";
+        const endpoint = "https://models.inference.ai.azure.com";
+        const deploymentName = "gpt-4o-mini";
+        const apiVersion = "2023-05-15";
         
         // متغيرات للمحادثة
         let chatHistory = [];
         let currentTheme = 'blue';
-        let isDarkMode = false;
         
         // تهيئة الصفحة
         function init() {
-            // تحميل الإعدادات
-            loadSettings();
-            
-            // تحميل المحادثة السابقة
+            // استعادة المحادثة المحفوظة
             loadChatHistory();
             
-            // إضافة رسالة ترحيب إذا كانت المحادثة فارغة
+            // استعادة الإعدادات
+            loadSettings();
+            
+            // إضافة رسالة ترحيبية إذا كانت المحادثة فارغة
             if (chatHistory.length === 0) {
                 addMessage("مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟", "bot");
             }
@@ -577,10 +573,10 @@
             sendButton.addEventListener('click', sendMessage);
             
             // مسح المحادثة
-            clearButton.addEventListener('click', clearChat);
+            clearChatButton.addEventListener('click', clearChat);
             
             // حفظ المحادثة
-            saveButton.addEventListener('click', saveChat);
+            saveChatButton.addEventListener('click', saveChat);
             
             // فتح الإعدادات
             settingsButton.addEventListener('click', () => {
@@ -610,55 +606,61 @@
             });
         }
         
-        // التحقق من الاتصال بـ OpenAI
+        // التحقق من الاتصال بـ Azure OpenAI
         async function checkConnection() {
             try {
-                // إرسال طلب اختبار بسيط
-                const response = await fetch(`${baseUrl}/v1/models`, {
-                    method: "GET",
+                // إرسال طلب اختبار
+                const response = await fetch(`${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`, {
+                    method: 'POST',
                     headers: {
-                        "Authorization": `Bearer ${apiKey}`
-                    }
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`,
+                        'x-ms-model-mesh-model-name': deploymentName
+                    },
+                    body: JSON.stringify({
+                        model: deploymentName,
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'أنت مساعد مفيد.'
+                            },
+                            {
+                                role: 'user',
+                                content: 'قل مرحبا فقط'
+                            }
+                        ],
+                        max_tokens: 5
+                    })
                 });
                 
                 if (response.ok) {
-                    console.log("تم الاتصال بنجاح");
-                    updateConnectionStatus("متصل", "connected");
-                    return true;
+                    // تم الاتصال بنجاح
+                    updateConnectionStatus(true);
                 } else {
-                    const errorData = await response.text();
-                    console.error("خطأ في الاتصال:", errorData);
-                    updateConnectionStatus(`خطأ: ${response.status} ${response.statusText}`, "error");
-                    return false;
+                    // فشل الاتصال
+                    updateConnectionStatus(false);
                 }
             } catch (error) {
-                console.error("خطأ في الاتصال:", error);
-                updateConnectionStatus(`خطأ: ${error.message}`, "error");
-                return false;
+                // حدث خطأ في الاتصال
+                updateConnectionStatus(false);
+                console.error('خطأ في الاتصال:', error);
             }
         }
         
         // تحديث حالة الاتصال
-        function updateConnectionStatus(status, state) {
-            if (state === 'connected') {
-                connectionStatus.textContent = status;
-                connectionStatus.classList.remove('disconnected', 'connecting');
-                connectionStatus.classList.add('connected');
-            } else if (state === 'connecting') {
-                connectionStatus.textContent = status;
-                connectionStatus.classList.remove('connected', 'disconnected');
-                connectionStatus.classList.add('connecting');
+        function updateConnectionStatus(isConnected) {
+            if (isConnected) {
+                statusDot.className = 'status-dot connected';
+                statusText.textContent = 'متصل';
             } else {
-                connectionStatus.textContent = status;
-                connectionStatus.classList.remove('connected', 'connecting');
-                connectionStatus.classList.add('disconnected');
+                statusDot.className = 'status-dot disconnected';
+                statusText.textContent = 'غير متصل';
             }
         }
         
-        // إرسال رسالة المستخدم
-        async function sendMessage() {
+        // إرسال رسالة
+        function sendMessage() {
             const message = userInput.value.trim();
-            
             if (message === '') return;
             
             // إضافة رسالة المستخدم
@@ -667,107 +669,76 @@
             // مسح مربع النص
             userInput.value = '';
             userInput.style.height = 'auto';
-            
-            // تعطيل زر الإرسال مؤقتًا
             sendButton.disabled = true;
             
             // إظهار مؤشر الكتابة
             showTypingIndicator();
             
-            try {
-                // الحصول على رد من الذكاء الاصطناعي
-                const response = await sendToAI(message);
-                
-                // إزالة مؤشر الكتابة
-                removeTypingIndicator();
-                
-                // إضافة رد الذكاء الاصطناعي
-                addMessage(response, 'bot');
-                
-                // إعادة تفعيل زر الإرسال
-                sendButton.disabled = false;
-            } catch (error) {
-                // إزالة مؤشر الكتابة
-                removeTypingIndicator();
-                
-                // إضافة رسالة الخطأ
-                addMessage(`حدث خطأ: ${error.message}`, 'bot');
-                
-                // إعادة تفعيل زر الإرسال
-                sendButton.disabled = false;
-            }
+            // الحصول على رد من الذكاء الاصطناعي
+            getAIResponse(message);
         }
         
-        // إرسال الرسالة إلى OpenAI
-        async function sendToAI(userMessage) {
+        // الحصول على رد من Azure OpenAI
+        async function getAIResponse(userMessage) {
             try {
-                console.log("بدء الاتصال بـ OpenAI");
-                updateConnectionStatus("جاري الاتصال...", "connecting");
-                
-                // تحضير بيانات الطلب
-                const messages = [];
-                
-                // إضافة رسالة النظام
-                messages.push({
-                    role: "system",
-                    content: "أنت مساعد ذكي ودود يتحدث باللغة العربية ويقدم معلومات دقيقة ومفيدة."
-                });
-                
-                // إضافة سجل المحادثة
-                for (const msg of chatHistory) {
-                    messages.push({
-                        role: msg.role,
-                        content: msg.content
-                    });
-                }
-                
-                // إضافة الرسالة الحالية
-                messages.push({
-                    role: "user",
-                    content: userMessage
-                });
-                
-                console.log("إرسال الطلب إلى OpenAI");
-                
-                // إعداد بيانات الطلب
-                const requestBody = {
-                    model: model,
-                    messages: messages,
-                    temperature: 0.7,
-                    max_tokens: 800
-                };
-                
-                // إرسال الطلب باستخدام fetch API
-                const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-                    method: "POST",
+                const response = await fetch(`${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`, {
+                    method: 'POST',
                     headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${apiKey}`
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`,
+                        'x-ms-model-mesh-model-name': deploymentName
                     },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify({
+                        model: deploymentName,
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'أنت مساعد ذكي ودود يتحدث باللغة العربية ويقدم معلومات دقيقة ومفيدة.'
+                            },
+                            ...getChatHistoryForAPI(),
+                            {
+                                role: 'user',
+                                content: userMessage
+                            }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 4000,
+                        top_p: 1
+                    })
                 });
                 
-                // التحقق من نجاح الطلب
-                if (!response.ok) {
-                    const errorData = await response.text();
-                    console.error("خطأ في الاستجابة:", errorData);
-                    updateConnectionStatus("خطأ في الاتصال", "error");
-                    throw new Error(`خطأ في الاستجابة: ${response.status} ${response.statusText}`);
-                }
+                // إزالة مؤشر الكتابة
+                removeTypingIndicator();
                 
-                // تحليل الاستجابة
-                const data = await response.json();
-                console.log("تم استلام الرد:", data);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.choices && data.choices.length > 0) {
+                        // إضافة رد الذكاء الاصطناعي
+                        const botResponse = data.choices[0].message.content;
+                        addMessage(botResponse, 'bot');
+                        
+                        // تحديث حالة الاتصال
+                        updateConnectionStatus(true);
+                    } else {
+                        // استجابة غير متوقعة
+                        addMessage('عذراً، لم أتمكن من الحصول على استجابة. الرجاء المحاولة مرة أخرى.', 'bot');
+                    }
+                } else {
+                    // خطأ في الاستجابة
+                    const errorData = await response.json();
+                    addMessage(`حدث خطأ: ${errorData.error?.message || 'خطأ غير معروف'}`, 'bot');
+                    
+                    // تحديث حالة الاتصال
+                    updateConnectionStatus(false);
+                }
+            } catch (error) {
+                // خطأ في الاتصال
+                removeTypingIndicator();
+                addMessage(`حدث خطأ في الاتصال: ${error.message}`, 'bot');
                 
                 // تحديث حالة الاتصال
-                updateConnectionStatus("متصل", "connected");
-                
-                // إعادة نص الرد
-                return data.choices[0].message.content;
-            } catch (error) {
-                console.error("خطأ:", error);
-                updateConnectionStatus("خطأ في الاتصال", "error");
-                throw error;
+                updateConnectionStatus(false);
             }
         }
         
