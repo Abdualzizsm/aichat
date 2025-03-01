@@ -445,6 +445,7 @@
                 <div class="status-dot connected" id="status-dot"></div>
                 <span id="status-text">متصل</span>
                 <span id="model-info">Azure OpenAI</span>
+                <span id="connection-status"></span>
             </div>
             <div class="tools">
                 <button class="tool-button" id="clear-chat" title="مسح المحادثة">
@@ -525,6 +526,7 @@
         const closeSettings = document.getElementById('close-settings');
         const darkModeToggle = document.getElementById('dark-mode-toggle');
         const themeOptions = document.querySelectorAll('.theme-option');
+        const connectionStatus = document.getElementById('connection-status');
         
         // إعدادات Azure OpenAI
         const { apiKey, endpoint, deploymentName, apiVersion } = config;
@@ -634,32 +636,39 @@
                 
                 if (response.ok) {
                     // تم الاتصال بنجاح
-                    updateConnectionStatus(true);
+                    updateConnectionStatus("متصل", "connected");
                 } else {
                     // فشل الاتصال
-                    updateConnectionStatus(false);
+                    updateConnectionStatus("خطأ في الاتصال", "disconnected");
                 }
             } catch (error) {
                 // حدث خطأ في الاتصال
-                updateConnectionStatus(false);
+                updateConnectionStatus("خطأ في الاتصال", "disconnected");
                 console.error('خطأ في الاتصال:', error);
             }
         }
         
         // تحديث حالة الاتصال
-        function updateConnectionStatus(isConnected) {
-            if (isConnected) {
-                statusDot.className = 'status-dot connected';
-                statusText.textContent = 'متصل';
+        function updateConnectionStatus(status, state) {
+            if (state === 'connected') {
+                connectionStatus.textContent = status;
+                connectionStatus.classList.remove('disconnected', 'connecting');
+                connectionStatus.classList.add('connected');
+            } else if (state === 'connecting') {
+                connectionStatus.textContent = status;
+                connectionStatus.classList.remove('connected', 'disconnected');
+                connectionStatus.classList.add('connecting');
             } else {
-                statusDot.className = 'status-dot disconnected';
-                statusText.textContent = 'غير متصل';
+                connectionStatus.textContent = status;
+                connectionStatus.classList.remove('connected', 'connecting');
+                connectionStatus.classList.add('disconnected');
             }
         }
         
-        // إرسال رسالة
-        function sendMessage() {
+        // إرسال رسالة المستخدم
+        async function sendMessage() {
             const message = userInput.value.trim();
+            
             if (message === '') return;
             
             // إضافة رسالة المستخدم
@@ -673,71 +682,71 @@
             // إظهار مؤشر الكتابة
             showTypingIndicator();
             
-            // الحصول على رد من الذكاء الاصطناعي
-            getAIResponse(message);
-        }
-        
-        // الحصول على رد من Azure OpenAI
-        async function getAIResponse(userMessage) {
             try {
-                const response = await fetch(`${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`,
-                        'x-ms-model-mesh-model-name': deploymentName
-                    },
-                    body: JSON.stringify({
-                        model: deploymentName,
-                        messages: [
-                            {
-                                role: 'system',
-                                content: 'أنت مساعد ذكي ودود يتحدث باللغة العربية ويقدم معلومات دقيقة ومفيدة.'
-                            },
-                            ...getChatHistoryForAPI(),
-                            {
-                                role: 'user',
-                                content: userMessage
-                            }
-                        ],
-                        temperature: 0.7,
-                        max_tokens: 4000,
-                        top_p: 1
-                    })
-                });
+                // الحصول على رد من الذكاء الاصطناعي
+                const response = await sendToAI(message);
                 
                 // إزالة مؤشر الكتابة
                 removeTypingIndicator();
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.choices && data.choices.length > 0) {
-                        // إضافة رد الذكاء الاصطناعي
-                        const botResponse = data.choices[0].message.content;
-                        addMessage(botResponse, 'bot');
-                        
-                        // تحديث حالة الاتصال
-                        updateConnectionStatus(true);
-                    } else {
-                        // استجابة غير متوقعة
-                        addMessage('عذراً، لم أتمكن من الحصول على استجابة. الرجاء المحاولة مرة أخرى.', 'bot');
-                    }
-                } else {
-                    // خطأ في الاستجابة
-                    const errorData = await response.json();
-                    addMessage(`حدث خطأ: ${errorData.error?.message || 'خطأ غير معروف'}`, 'bot');
-                    
-                    // تحديث حالة الاتصال
-                    updateConnectionStatus(false);
-                }
+                // إضافة رد الذكاء الاصطناعي
+                addMessage(response, 'bot');
             } catch (error) {
-                // خطأ في الاتصال
+                // إزالة مؤشر الكتابة
                 removeTypingIndicator();
-                addMessage(`حدث خطأ في الاتصال: ${error.message}`, 'bot');
                 
-                // تحديث حالة الاتصال
-                updateConnectionStatus(false);
+                // إضافة رسالة الخطأ
+                addMessage(`حدث خطأ: ${error.message}`, 'bot');
+            }
+        }
+        
+        // إرسال الرسالة إلى Azure OpenAI
+        async function sendToAI(userMessage) {
+            try {
+                updateConnectionStatus("جاري الاتصال...", "connecting");
+                
+                // تحضير بيانات الطلب
+                const messages = [];
+                
+                // إضافة سجل المحادثة
+                for (const msg of chatHistory) {
+                    messages.push({
+                        role: msg.role,
+                        content: msg.content
+                    });
+                }
+                
+                // إضافة الرسالة الحالية
+                messages.push({
+                    role: "user",
+                    content: userMessage
+                });
+                
+                // إرسال الطلب إلى Azure OpenAI
+                const response = await fetch(`${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'api-key': apiKey
+                    },
+                    body: JSON.stringify({
+                        messages: messages,
+                        max_tokens: 800
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || `خطأ: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                updateConnectionStatus("متصل", "connected");
+                return data.choices[0].message.content;
+            } catch (error) {
+                console.error("Error:", error);
+                updateConnectionStatus(`خطأ: ${error.message}`, "error");
+                return `حدث خطأ: ${error.message}`;
             }
         }
         
