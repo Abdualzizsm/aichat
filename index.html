@@ -703,7 +703,16 @@
         // إرسال الرسالة إلى Azure OpenAI
         async function sendToAI(userMessage) {
             try {
+                console.log("بدء الاتصال بـ Azure OpenAI");
                 updateConnectionStatus("جاري الاتصال...", "connecting");
+                
+                // طباعة معلومات التكوين للتصحيح
+                console.log("معلومات التكوين:", {
+                    endpoint,
+                    deploymentName,
+                    apiVersion,
+                    model
+                });
                 
                 // تحضير بيانات الطلب
                 const messages = [];
@@ -728,33 +737,56 @@
                     content: userMessage
                 });
                 
+                // طباعة الرسائل للتصحيح
+                console.log("الرسائل المرسلة:", JSON.stringify(messages));
+                
                 // إرسال الطلب إلى Azure OpenAI
-                const response = await fetch(`${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`, {
+                const url = `${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`;
+                console.log("URL الطلب:", url);
+                
+                const requestBody = {
+                    messages: messages,
+                    model: model,
+                    temperature: 0.7,
+                    max_tokens: 800
+                };
+                
+                console.log("بيانات الطلب:", JSON.stringify(requestBody));
+                
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'api-key': apiKey
                     },
-                    body: JSON.stringify({
-                        messages: messages,
-                        model: model,
-                        temperature: 0.7,
-                        max_tokens: 800
-                    })
+                    body: JSON.stringify(requestBody)
                 });
                 
+                console.log("استجابة الخادم:", response.status, response.statusText);
+                
                 if (!response.ok) {
-                    const errorData = await response.json();
+                    const errorText = await response.text();
+                    console.error("نص الخطأ:", errorText);
+                    
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        errorData = { error: { message: errorText } };
+                    }
+                    
                     throw new Error(errorData.error?.message || `خطأ: ${response.status} ${response.statusText}`);
                 }
                 
                 const data = await response.json();
+                console.log("بيانات الاستجابة:", JSON.stringify(data));
+                
                 updateConnectionStatus("متصل", "connected");
                 return data.choices[0].message.content;
             } catch (error) {
-                console.error("Error:", error);
+                console.error("خطأ في الاتصال:", error);
                 updateConnectionStatus(`خطأ: ${error.message}`, "error");
-                return `حدث خطأ: ${error.message}`;
+                return `حدث خطأ في الاتصال: ${error.message}`;
             }
         }
         
