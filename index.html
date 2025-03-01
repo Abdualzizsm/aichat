@@ -614,27 +614,27 @@
         async function checkConnection() {
             try {
                 // إرسال طلب اختبار بسيط
-                const response = await fetch(`${baseUrl}/models`, {
+                const response = await fetch(`${baseUrl}/v1/models`, {
                     method: "GET",
                     headers: {
                         "Authorization": `Bearer ${apiKey}`
                     }
                 });
                 
-                // التحقق من نجاح الطلب
                 if (response.ok) {
-                    // تم الاتصال بنجاح
+                    console.log("تم الاتصال بنجاح");
                     updateConnectionStatus("متصل", "connected");
+                    return true;
                 } else {
-                    // فشل الاتصال
                     const errorData = await response.text();
-                    console.error("خطأ في الاستجابة:", errorData);
-                    updateConnectionStatus("خطأ في الاتصال", "disconnected");
+                    console.error("خطأ في الاتصال:", errorData);
+                    updateConnectionStatus(`خطأ: ${response.status} ${response.statusText}`, "error");
+                    return false;
                 }
             } catch (error) {
-                // فشل الاتصال
                 console.error("خطأ في الاتصال:", error);
-                updateConnectionStatus("خطأ في الاتصال", "disconnected");
+                updateConnectionStatus(`خطأ: ${error.message}`, "error");
+                return false;
             }
         }
         
@@ -667,6 +667,8 @@
             // مسح مربع النص
             userInput.value = '';
             userInput.style.height = 'auto';
+            
+            // تعطيل زر الإرسال مؤقتًا
             sendButton.disabled = true;
             
             // إظهار مؤشر الكتابة
@@ -681,12 +683,18 @@
                 
                 // إضافة رد الذكاء الاصطناعي
                 addMessage(response, 'bot');
+                
+                // إعادة تفعيل زر الإرسال
+                sendButton.disabled = false;
             } catch (error) {
                 // إزالة مؤشر الكتابة
                 removeTypingIndicator();
                 
                 // إضافة رسالة الخطأ
                 addMessage(`حدث خطأ: ${error.message}`, 'bot');
+                
+                // إعادة تفعيل زر الإرسال
+                sendButton.disabled = false;
             }
         }
         
@@ -730,7 +738,7 @@
                 };
                 
                 // إرسال الطلب باستخدام fetch API
-                const response = await fetch(`${baseUrl}/chat/completions`, {
+                const response = await fetch(`${baseUrl}/v1/chat/completions`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -743,6 +751,7 @@
                 if (!response.ok) {
                     const errorData = await response.text();
                     console.error("خطأ في الاستجابة:", errorData);
+                    updateConnectionStatus("خطأ في الاتصال", "error");
                     throw new Error(`خطأ في الاستجابة: ${response.status} ${response.statusText}`);
                 }
                 
@@ -750,12 +759,15 @@
                 const data = await response.json();
                 console.log("تم استلام الرد:", data);
                 
+                // تحديث حالة الاتصال
                 updateConnectionStatus("متصل", "connected");
+                
+                // إعادة نص الرد
                 return data.choices[0].message.content;
             } catch (error) {
-                console.error("خطأ في الاتصال:", error);
-                updateConnectionStatus(`خطأ: ${error.message}`, "error");
-                return `حدث خطأ في الاتصال: ${error.message}`;
+                console.error("خطأ:", error);
+                updateConnectionStatus("خطأ في الاتصال", "error");
+                throw error;
             }
         }
         
