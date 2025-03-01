@@ -1,8 +1,7 @@
-// إعدادات الاتصال بـ Azure OpenAI
-const config = {
-    apiKey: "YOUR_API_KEY", // سيتم استبداله في الخادم
-    endpoint: "https://YOUR_RESOURCE_NAME.openai.azure.com", // تأكد من تحديث هذا بعنوان الموارد الخاص بك
-    deploymentName: "YOUR_DEPLOYMENT_NAME", // تأكد من تحديث هذا باسم النشر الخاص بك
-    apiVersion: "2023-05-15",
-    model: "gpt-4" // تأكد من تحديث هذا بنموذج النشر الخاص بك
-};
+// إعدادات Azure OpenAI
+const OPENAI_API_KEY = process.env.GITHUB_TOKEN || "YOUR_API_KEY_HERE"; // سيتم تحديثه في Render
+const OPENAI_MODEL = "gpt-4o-mini";
+const OPENAI_BASE_URL = "https://models.inference.ai.azure.com";
+
+// تصدير الإعدادات
+export { OPENAI_API_KEY, OPENAI_MODEL, OPENAI_BASE_URL };
