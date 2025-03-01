@@ -727,11 +727,14 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'api-key': apiKey
+                        'api-key': apiKey,
+                        'x-ms-model-mesh-model-name': deploymentName
                     },
                     body: JSON.stringify({
+                        model: deploymentName,
                         messages: messages,
-                        max_tokens: 800
+                        max_tokens: 800,
+                        temperature: 0.7
                     })
                 });
                 
