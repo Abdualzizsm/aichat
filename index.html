@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>محادثة ذكية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <script src="config.js"></script>
     <style>
         :root {
             --primary-color: #4361ee;
@@ -525,10 +527,7 @@
         const themeOptions = document.querySelectorAll('.theme-option');
         
         // إعدادات Azure OpenAI
-        const apiKey = "YOUR_API_KEY"; // قم بتغيير هذا إلى مفتاح API الخاص بك
-        const endpoint = "https://models.inference.ai.azure.com";
-        const deploymentName = "gpt-4o-mini";
-        const apiVersion = "2023-05-15";
+        const { apiKey, endpoint, deploymentName, apiVersion } = config;
         
         // متغيرات للمحادثة
         let chatHistory = [];
