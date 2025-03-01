@@ -512,32 +512,16 @@
     </div>
     
     <script>
-        // إعدادات OpenAI - سيتم الحصول على المفتاح من خدمة خارجية
-        let apiKey = '';
+        // إعدادات OpenAI
+        const apiKey = 'API_KEY_PLACEHOLDER'; // سيتم استبداله يدويًا بعد النشر
         const model = 'gpt-4o-mini';
-        
-        // الحصول على مفتاح API من خدمة خارجية
-        async function getApiKey() {
-            try {
-                const response = await fetch('https://api.npoint.io/9a5f5e0f5c1f7b0b5c1f');
-                const data = await response.json();
-                apiKey = data.key;
-                console.log("تم الحصول على مفتاح API بنجاح");
-                checkConnection();
-            } catch (error) {
-                console.error("خطأ في الحصول على مفتاح API:", error);
-                updateConnectionStatus("خطأ في الحصول على مفتاح API", "error");
-            }
-        }
         
         // العناصر الرئيسية
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
-        const statusDot = document.getElementById('status-dot');
-        const statusText = document.getElementById('status-text');
-        const clearChatButton = document.getElementById('clear-chat');
-        const saveChatButton = document.getElementById('save-chat');
+        const clearButton = document.getElementById('clear-chat');
+        const saveButton = document.getElementById('save-chat');
         const settingsButton = document.getElementById('settings-button');
         const settingsModal = document.getElementById('settings-modal');
         const closeSettings = document.getElementById('close-settings');
@@ -548,22 +532,23 @@
         // متغيرات للمحادثة
         let chatHistory = [];
         let currentTheme = 'blue';
+        let isDarkMode = false;
         
         // تهيئة الصفحة
         function init() {
-            // استعادة المحادثة المحفوظة
-            loadChatHistory();
-            
-            // استعادة الإعدادات
+            // تحميل الإعدادات
             loadSettings();
             
-            // إضافة رسالة ترحيبية إذا كانت المحادثة فارغة
+            // تحميل المحادثة السابقة
+            loadChatHistory();
+            
+            // إضافة رسالة ترحيب إذا كانت المحادثة فارغة
             if (chatHistory.length === 0) {
                 addMessage("مرحباً! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟", "bot");
             }
             
-            // الحصول على مفتاح API
-            getApiKey();
+            // التحقق من الاتصال
+            checkConnection();
             
             // إعداد مستمع لمدخلات المستخدم
             userInput.addEventListener('input', () => {
@@ -588,10 +573,10 @@
             sendButton.addEventListener('click', sendMessage);
             
             // مسح المحادثة
-            clearChatButton.addEventListener('click', clearChat);
+            clearButton.addEventListener('click', clearChat);
             
             // حفظ المحادثة
-            saveChatButton.addEventListener('click', saveChat);
+            saveButton.addEventListener('click', saveChat);
             
             // فتح الإعدادات
             settingsButton.addEventListener('click', () => {
