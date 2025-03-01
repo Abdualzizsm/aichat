@@ -6,6 +6,7 @@
     <title>محادثة ذكية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/openai@4.24.1/dist/index.min.js"></script>
     <style>
         :root {
             --primary-color: #4361ee;
@@ -512,11 +513,8 @@
     </div>
     
     <script>
-        // إعدادات Azure OpenAI - سيتم استبدالها بواسطة متغيرات البيئة في Render
+        // إعدادات OpenAI
         const apiKey = '__API_KEY__';
-        const endpoint = '__ENDPOINT__';
-        const deploymentName = '__DEPLOYMENT_NAME__';
-        const apiVersion = '2023-05-15';
         const model = 'gpt-4';
         
         // العناصر الرئيسية
@@ -610,44 +608,25 @@
             });
         }
         
-        // التحقق من الاتصال بـ Azure OpenAI
+        // التحقق من الاتصال بـ OpenAI
         async function checkConnection() {
             try {
-                // إرسال طلب اختبار
-                const response = await fetch(`${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`,
-                        'x-ms-model-mesh-model-name': deploymentName
-                    },
-                    body: JSON.stringify({
-                        model: deploymentName,
-                        messages: [
-                            {
-                                role: 'system',
-                                content: 'أنت مساعد مفيد.'
-                            },
-                            {
-                                role: 'user',
-                                content: 'قل مرحبا فقط'
-                            }
-                        ],
-                        max_tokens: 5
-                    })
+                // إنشاء عميل OpenAI
+                const openai = new OpenAI({
+                    apiKey: apiKey,
+                    baseURL: "https://models.inference.ai.azure.com",
+                    dangerouslyAllowBrowser: true
                 });
                 
-                if (response.ok) {
-                    // تم الاتصال بنجاح
-                    updateConnectionStatus("متصل", "connected");
-                } else {
-                    // فشل الاتصال
-                    updateConnectionStatus("خطأ في الاتصال", "disconnected");
-                }
+                // إرسال طلب اختبار بسيط
+                const models = await openai.models.list();
+                
+                // تم الاتصال بنجاح
+                updateConnectionStatus("متصل", "connected");
             } catch (error) {
-                // حدث خطأ في الاتصال
+                // فشل الاتصال
+                console.error("خطأ في الاتصال:", error);
                 updateConnectionStatus("خطأ في الاتصال", "disconnected");
-                console.error('خطأ في الاتصال:', error);
             }
         }
         
@@ -703,11 +682,18 @@
             }
         }
         
-        // إرسال الرسالة إلى Azure OpenAI
+        // إرسال الرسالة إلى OpenAI
         async function sendToAI(userMessage) {
             try {
-                console.log("بدء الاتصال بـ Azure OpenAI");
+                console.log("بدء الاتصال بـ OpenAI");
                 updateConnectionStatus("جاري الاتصال...", "connecting");
+                
+                // إنشاء عميل OpenAI
+                const openai = new OpenAI({
+                    apiKey: apiKey,
+                    baseURL: "https://models.inference.ai.azure.com",
+                    dangerouslyAllowBrowser: true
+                });
                 
                 // تحضير بيانات الطلب
                 const messages = [];
@@ -732,49 +718,20 @@
                     content: userMessage
                 });
                 
-                // إرسال الطلب إلى Azure OpenAI
-                const url = `${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`;
-                console.log("URL الطلب:", url);
+                console.log("إرسال الطلب إلى OpenAI");
                 
-                const requestBody = {
+                // إرسال الطلب باستخدام مكتبة OpenAI
+                const completion = await openai.chat.completions.create({
+                    model: "gpt-4o-mini",
                     messages: messages,
-                    model: model,
                     temperature: 0.7,
                     max_tokens: 800
-                };
-                
-                console.log("بيانات الطلب:", JSON.stringify(requestBody));
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'api-key': apiKey
-                    },
-                    body: JSON.stringify(requestBody)
                 });
                 
-                console.log("استجابة الخادم:", response.status, response.statusText);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error("نص الخطأ:", errorText);
-                    
-                    let errorData;
-                    try {
-                        errorData = JSON.parse(errorText);
-                    } catch (e) {
-                        errorData = { error: { message: errorText } };
-                    }
-                    
-                    throw new Error(errorData.error?.message || `خطأ: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                console.log("بيانات الاستجابة:", JSON.stringify(data));
+                console.log("تم استلام الرد:", completion);
                 
                 updateConnectionStatus("متصل", "connected");
-                return data.choices[0].message.content;
+                return completion.choices[0].message.content;
             } catch (error) {
                 console.error("خطأ في الاتصال:", error);
                 updateConnectionStatus(`خطأ: ${error.message}`, "error");

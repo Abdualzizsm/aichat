@@ -5,11 +5,7 @@ services:
     buildCommand: ./render-build.sh
     staticPublishPath: ./
     envVars:
-      - key: API_KEY
-        sync: false
-      - key: ENDPOINT
-        sync: false
-      - key: DEPLOYMENT_NAME
+      - key: GITHUB_TOKEN
         sync: false
     routes:
       - type: rewrite
