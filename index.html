@@ -529,7 +529,7 @@
         const connectionStatus = document.getElementById('connection-status');
         
         // إعدادات Azure OpenAI
-        const { apiKey, endpoint, deploymentName, apiVersion } = config;
+        const { apiKey, endpoint, deploymentName, apiVersion, model } = config;
         
         // متغيرات للمحادثة
         let chatHistory = [];
@@ -708,6 +708,12 @@
                 // تحضير بيانات الطلب
                 const messages = [];
                 
+                // إضافة رسالة النظام
+                messages.push({
+                    role: "system",
+                    content: "أنت مساعد ذكي ودود يتحدث باللغة العربية ويقدم معلومات دقيقة ومفيدة."
+                });
+                
                 // إضافة سجل المحادثة
                 for (const msg of chatHistory) {
                     messages.push({
@@ -727,14 +733,13 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'api-key': apiKey,
-                        'x-ms-model-mesh-model-name': deploymentName
+                        'api-key': apiKey
                     },
                     body: JSON.stringify({
-                        model: deploymentName,
                         messages: messages,
-                        max_tokens: 800,
-                        temperature: 0.7
+                        model: model,
+                        temperature: 0.7,
+                        max_tokens: 800
                     })
                 });
                 
