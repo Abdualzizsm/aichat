@@ -1,12 +1,16 @@
 services:
   - type: web
-    name: aichat
-    runtime: static
-    buildCommand: null
+    name: ai-chat
+    env: static
+    buildCommand: ./render-build.sh
     staticPublishPath: ./
     envVars:
       - key: API_KEY
-        value: YOUR_API_KEY
+        sync: false
+      - key: ENDPOINT
+        sync: false
+      - key: DEPLOYMENT_NAME
+        sync: false
     routes:
       - type: rewrite
         source: /*

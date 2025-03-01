@@ -6,7 +6,6 @@
     <title>محادثة ذكية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-    <script src="config.js"></script>
     <style>
         :root {
             --primary-color: #4361ee;
@@ -513,6 +512,13 @@
     </div>
     
     <script>
+        // إعدادات Azure OpenAI - سيتم استبدالها بواسطة متغيرات البيئة في Render
+        const apiKey = '__API_KEY__';
+        const endpoint = '__ENDPOINT__';
+        const deploymentName = '__DEPLOYMENT_NAME__';
+        const apiVersion = '2023-05-15';
+        const model = 'gpt-4';
+        
         // العناصر الرئيسية
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
@@ -527,9 +533,6 @@
         const darkModeToggle = document.getElementById('dark-mode-toggle');
         const themeOptions = document.querySelectorAll('.theme-option');
         const connectionStatus = document.getElementById('connection-status');
-        
-        // إعدادات Azure OpenAI
-        const { apiKey, endpoint, deploymentName, apiVersion, model } = config;
         
         // متغيرات للمحادثة
         let chatHistory = [];
@@ -706,14 +709,6 @@
                 console.log("بدء الاتصال بـ Azure OpenAI");
                 updateConnectionStatus("جاري الاتصال...", "connecting");
                 
-                // طباعة معلومات التكوين للتصحيح
-                console.log("معلومات التكوين:", {
-                    endpoint,
-                    deploymentName,
-                    apiVersion,
-                    model
-                });
-                
                 // تحضير بيانات الطلب
                 const messages = [];
                 
@@ -736,9 +731,6 @@
                     role: "user",
                     content: userMessage
                 });
-                
-                // طباعة الرسائل للتصحيح
-                console.log("الرسائل المرسلة:", JSON.stringify(messages));
                 
                 // إرسال الطلب إلى Azure OpenAI
                 const url = `${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`;
