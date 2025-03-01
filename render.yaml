@@ -5,7 +5,7 @@ services:
     buildCommand: ./render-build.sh
     staticPublishPath: ./
     envVars:
-      - key: OPENAI_API_KEY
+      - key: GITHUB_TOKEN
         sync: false # يجب إدخال القيمة يدويًا في لوحة تحكم Render
     routes:
       - type: rewrite
