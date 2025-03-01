@@ -1,12 +1,12 @@
 services:
   - type: web
-    name: ai-chat
+    name: aichat
     env: static
     buildCommand: ./render-build.sh
     staticPublishPath: ./
     envVars:
-      - key: GITHUB_TOKEN
-        sync: false
+      - key: OPENAI_API_KEY
+        sync: false # يجب إدخال القيمة يدويًا في لوحة تحكم Render
     routes:
       - type: rewrite
         source: /*
